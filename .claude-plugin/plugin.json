@@ -3,8 +3,12 @@
   "version": "1.0.0",
   "description": "Generates and enforces project coding guidelines. Simple mode: flat rule list, direct review. Full mode: categorized guidelines with severity levels and structured reports.",
   "author": {
-    "name": "Xander Scannell"
+    "name": "Xander Scannell",
+    "email": "xanderscannell@gmail.com",
+    "url": "https://github.com/xanderscannell"
   },
+  "homepage": "https://github.com/xanderscannell/guidelines",
+  "repository": "https://github.com/xanderscannell/guidelines",
   "license": "MIT",
   "keywords": [
     "guidelines",
@@ -12,12 +16,5 @@
     "conventions",
     "standards",
     "linting"
-  ],
-  "skills": [
-    "skills/guidelines-init",
-    "skills/guidelines-review"
-  ],
-  "agents": [
-    "agents/reviewer.md"
   ]
 }

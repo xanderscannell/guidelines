@@ -1,0 +1,41 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "project-guidelines",
+  "description": "Generates and enforces project coding guidelines with simple and full modes",
+  "owner": {
+    "name": "Xander Scannell",
+    "email": "xanderscannell@gmail.com"
+  },
+  "metadata": {
+    "description": "Project guidelines generation and enforcement plugin"
+  },
+  "plugins": [
+    {
+      "name": "project-guidelines",
+      "source": "./",
+      "description": "Generates and enforces project coding guidelines. Simple mode: flat rule list, direct review. Full mode: categorized guidelines with severity levels and structured reports.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Xander Scannell",
+        "email": "xanderscannell@gmail.com"
+      },
+      "homepage": "https://github.com/xanderscannell/guidelines",
+      "repository": "https://github.com/xanderscannell/guidelines",
+      "license": "MIT",
+      "keywords": [
+        "guidelines",
+        "code-review",
+        "conventions",
+        "standards",
+        "linting"
+      ],
+      "category": "development",
+      "tags": [
+        "guidelines",
+        "code-review",
+        "conventions"
+      ],
+      "strict": false
+    }
+  ]
+}
