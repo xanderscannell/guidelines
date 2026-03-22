@@ -7,11 +7,6 @@ description: >
   code conventions, or says things like "set up guidelines", "init standards",
   "create a style guide", or "what conventions should we follow". Also use when
   a project has no PROJECT_GUIDELINES.md and the user asks for a code review.
-allowed-tools:
-  - Read
-  - Write
-  - Glob
-  - Grep
 ---
 
 # Guidelines Init

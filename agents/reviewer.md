@@ -4,10 +4,7 @@ description: >
   Subagent that reviews a batch of files against project guidelines and returns
   structured JSON findings. Used by guidelines-review for parallel review of
   large projects. Supports both simple and full mode.
-allowed-tools:
-  - Read
-  - Grep
-  - Glob
+tools: Read, Grep, Glob
 ---
 
 # Reviewer Subagent

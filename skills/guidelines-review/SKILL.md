@@ -7,12 +7,6 @@ description: >
   "review against guidelines", "check my code", "are we following our standards",
   "audit this file", or "guidelines check". Also triggers when the user asks for a
   code review in a project that has a PROJECT_GUIDELINES.md file.
-allowed-tools:
-  - Read
-  - Write
-  - Glob
-  - Grep
-  - Bash
 ---
 
 # Guidelines Review
