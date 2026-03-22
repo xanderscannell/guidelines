@@ -22,14 +22,27 @@ That's it. The rest of this README covers the details.
 
 ## Installation
 
+**Marketplace (recommended)**
+```bash
+# Add marketplace
+/plugin marketplace add xanderscannell/guidelines
+
+# Install plugin
+/plugin install project-guidelines
+```
+
 **Claude Code CLI:**
 ```bash
 claude --plugin-dir /path/to/Guidelines
 ```
 
 **VS Code:**
-Open the Command Palette and run **Chat: Install Plugin From Source**, then point to
-this directory or its Git repository URL.
+
+Open the Command Palette (Ctrl+Shift+P) and run:
+```bash
+Chat: Install Plugin From Source
+```
+then point to this directory or its Git repository URL.
 
 ## Two Modes
 
