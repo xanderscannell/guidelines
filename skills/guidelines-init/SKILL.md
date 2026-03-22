@@ -1,96 +1,233 @@
 ---
 name: guidelines-init
-description: "Scans your project to auto-detect conventions, interviews you to fill gaps, and generates a PROJECT_GUIDELINES.md as the single source of truth for your project's coding standards."
+description: >
+  Scaffolds a PROJECT_GUIDELINES.md file for a codebase by auto-detecting project
+  conventions and interviewing the user. Use this skill when the user wants to set up
+  coding standards, initialize project guidelines, create a style guide, establish
+  code conventions, or says things like "set up guidelines", "init standards",
+  "create a style guide", or "what conventions should we follow". Also use when
+  a project has no PROJECT_GUIDELINES.md and the user asks for a code review.
+allowed-tools:
+  - Read
+  - Write
+  - Glob
+  - Grep
 ---
 
-# guidelines-init
+# Guidelines Init
 
-You are a project conventions analyst. Your job is to scan the user's project, detect existing patterns and conventions, interview the user to fill in any gaps, and produce a comprehensive `PROJECT_GUIDELINES.md` file at the project root.
+Generate a `PROJECT_GUIDELINES.md` file that becomes the single source of truth
+for project conventions. This file is later consumed by `/guidelines-review`.
 
 ## Workflow
 
-### Phase 1: Auto-Detection
+### Phase 1 — Auto-detect
 
-Scan the project to detect conventions across these categories:
+Scan the project to infer as much as possible before asking the user anything.
+Read files, don't just check existence.
 
-1. **Language & Runtime** — Languages used, versions, runtimes (Node, Python, Go, etc.)
-2. **Project Structure** — Directory layout conventions, module organization
-3. **Code Style** — Indentation, quotes, semicolons, naming conventions (camelCase, snake_case, PascalCase), max line length
-4. **Formatting & Linting** — Existing config files (.prettierrc, .eslintrc, ruff.toml, .editorconfig, etc.)
-5. **Testing** — Test framework, file naming (*.test.ts, *_test.go), location (co-located vs. test/), coverage expectations
-6. **Dependencies** — Package manager (npm, pnpm, yarn, pip, go modules), lockfile presence
-7. **Version Control** — Branching strategy clues (branch names), commit message patterns, .gitignore contents
-8. **CI/CD** — Pipeline config files (.github/workflows, Jenkinsfile, etc.)
-9. **Documentation** — README presence, inline comment style, JSDoc/docstrings usage
-10. **Error Handling** — Patterns for error handling, logging framework
+**Signal files to scan:**
 
-For each category, collect concrete evidence (file paths, line examples) to justify your findings.
+| Signal file | What to infer |
+|---|---|
+| `package.json` | Language (TS/JS), framework, test runner, linter, formatter |
+| `tsconfig.json` / `jsconfig.json` | Strict mode, module system, path aliases |
+| `.eslintrc*` / `eslint.config.*` | Lint rules already codified |
+| `.prettierrc*` | Formatting conventions |
+| `pyproject.toml` / `setup.cfg` / `requirements.txt` | Python tooling, linter config |
+| `ruff.toml` / `.flake8` | Python linting conventions |
+| `go.mod` | Go module conventions, Go version |
+| `Cargo.toml` | Rust edition, features, dependencies |
+| `Dockerfile` / `docker-compose.yml` | Containerization conventions |
+| `.github/workflows/*.yml` | CI/CD patterns, checks, test commands |
+| `.editorconfig` | Indentation, line endings, charset |
+| `CLAUDE.md` / `.github/copilot-instructions.md` | Prior AI-assistant conventions |
+| `.gitignore` | What the project considers generated/private |
 
-### Phase 2: Interview
+**Pattern detection (use Glob and Grep, not shell commands):**
 
-Present your findings to the user as a summary, then ask targeted questions to fill gaps. Focus on:
+- Use `Glob("**/*.test.*")` and `Glob("**/*.spec.*")` to detect test file naming
+- Use `Glob("**/*_test.go")` or `Glob("**/test_*.py")` for language-specific test patterns
+- Use `Grep` on a sample of source files (first 10 found) to detect:
+  - Import style (named vs default exports, absolute vs relative paths)
+  - Indentation (tabs vs spaces, width)
+  - Quote style (single vs double)
+  - Semicolon usage
+- Use `Glob("*/")` and `Glob("src/*/")` to detect directory structure organization
+- Check for monorepo signals: `Glob("packages/*/package.json")`, `Glob("apps/*/")`,
+  presence of `lerna.json`, `pnpm-workspace.yaml`, or `turbo.json`
 
-- Anything you could not auto-detect
-- Ambiguous conventions where the codebase is inconsistent
-- Preferences that are matters of opinion (e.g., "Do you prefer named exports or default exports?")
+### Phase 2 — Interview
 
-Keep the interview concise — group related questions, skip anything already clear from the scan. If the project is new or empty, shift to a fuller interview covering all categories.
+Present auto-detected findings as a summary, then ask targeted questions to fill gaps.
+Organize questions by category. **Skip categories already fully answered by auto-detection.**
 
-### Phase 3: Generate PROJECT_GUIDELINES.md
+Ask these in order:
 
-Write a `PROJECT_GUIDELINES.md` file at the project root with the following structure:
+1. **Code Style** — Naming conventions (camelCase, snake_case, etc.), max line length,
+   import ordering preference, quote style, semicolons
+2. **Architecture** — Preferred patterns (MVC, clean architecture, feature-based),
+   directory structure rules, module boundaries
+3. **Error Handling** — Strategy (exceptions, Result types, error codes),
+   logging conventions, what to do with unhandled errors
+4. **Testing** — Required coverage areas, naming conventions, test organization,
+   mocking strategy, what must have tests vs what's optional
+5. **Git Workflow** — Branch naming, commit message format (conventional commits?),
+   PR size expectations, required reviewers
+6. **Documentation** — What needs docstrings/JSDoc, README standards,
+   inline comment policy
+7. **Security** — Secret management, input validation requirements,
+   dependency update policy, auth patterns
+8. **Performance** — Caching strategy, N+1 query awareness,
+   bundle size concerns, lazy loading rules
+
+Don't ask about categories that clearly don't apply (e.g., skip "bundle size" for a
+CLI tool, skip "caching" for a static site, skip "N+1 queries" for a project without
+a database).
+
+If `references/guideline-categories.md` is available in the plugin directory, read
+the sections relevant to the detected tech stack for example rules to reference during
+generation. Do not copy examples verbatim — adapt them to use the project's own code
+and patterns.
+
+### Phase 3 — Generate
+
+Create `PROJECT_GUIDELINES.md` in the repo root using this structure.
+
+**Critical: every section or subsection must have a severity comment on the line
+immediately after the heading.** Format: `<!-- severity: error|warning|info -->`
+
+Default severity mapping:
+
+| Category | Default Severity |
+|---|---|
+| Security | `error` |
+| Error Handling | `error` |
+| Architecture | `error` |
+| Code Style | `warning` |
+| Testing | `warning` |
+| Git Workflow | `warning` |
+| Documentation | `warning` |
+| Performance | `info` |
+
+Template:
 
 ```markdown
 # Project Guidelines
 
-> Auto-generated by guidelines-init. This is the single source of truth for project conventions.
-> Last updated: {date}
+<!-- Generated by guidelines-init. Edit freely — this is YOUR source of truth. -->
+<!-- Last generated: YYYY-MM-DD -->
 
 ## Overview
-Brief project description and primary language/framework.
-
-## Language & Runtime
-...
-
-## Project Structure
-...
+<!-- One paragraph describing the project and its primary tech stack -->
 
 ## Code Style
-...
 
-## Formatting & Linting
-...
+### Naming
+<!-- severity: warning -->
+- ...
 
-## Testing
-...
+### Formatting
+<!-- severity: warning -->
+- ...
 
-## Dependencies
-...
+### Imports
+<!-- severity: warning -->
+- ...
 
-## Version Control
-...
+## Architecture
 
-## CI/CD
-...
+### Directory Structure
+<!-- severity: error -->
+- ...
 
-## Documentation
-...
+### Module Boundaries
+<!-- severity: error -->
+- ...
 
 ## Error Handling
-...
+<!-- severity: error -->
+- ...
 
-## Custom Rules
-Any project-specific rules that don't fit the categories above.
+## Testing
+
+### Requirements
+<!-- severity: warning -->
+- ...
+
+### Conventions
+<!-- severity: warning -->
+- ...
+
+## Git Workflow
+<!-- severity: warning -->
+- ...
+
+## Documentation
+<!-- severity: warning -->
+- ...
+
+## Security
+<!-- severity: error -->
+- ...
+
+## Performance
+<!-- severity: info -->
+- ...
 ```
 
-Each section should contain:
-- The **convention** (what to do)
-- The **rationale** (why, if known)
-- An **example** where helpful
+**Formatting rules for the generated file:**
+
+- The `<!-- severity: ... -->` comment is the contract that `/guidelines-review` depends
+  on. It must appear on the line directly after the section heading, before any content.
+- Use concrete examples with code blocks wherever possible. Don't say "use descriptive
+  names" — say `use descriptive names like fetchUserById, not getData`.
+- Each bullet should be independently actionable.
+- Use the project's own code as examples wherever possible.
+- Sections that don't apply to the project should be omitted entirely, not left blank.
+
+### Phase 4 — Confirm
+
+After generating the file, show the user a summary table:
+
+```
+| Category       | Rules | Severity |
+|----------------|-------|----------|
+| Code Style     | 8     | warning  |
+| Architecture   | 4     | error    |
+| Error Handling | 3     | error    |
+| Testing        | 5     | warning  |
+| ...            | ...   | ...      |
+```
+
+Ask if they want to:
+- Adjust severity levels for any category
+- Add, remove, or modify any specific rules
+- Change the location of the file
+
+Once confirmed, recommend committing `PROJECT_GUIDELINES.md` to the repo so the whole
+team benefits and so `/guidelines-review` can use it.
+
+## Edge Cases
+
+**Monorepo:** If you detect a monorepo (multiple `package.json` files, `packages/` or
+`apps/` directory, or presence of `lerna.json` / `pnpm-workspace.yaml` / `turbo.json`),
+ask whether guidelines should be global or per-package. Generate a root-level file with
+shared rules and note where per-package overrides would go.
+
+**Existing guidelines:** If `PROJECT_GUIDELINES.md` already exists, ask whether to
+update it (merge new detections into existing sections) or replace it entirely.
+Default to merging.
+
+**Empty project:** If the project has very few source files (< 5), generate a starter
+template with sensible defaults for the detected language and clearly mark sections as
+`<!-- TODO: customize once the project has more code -->`.
 
 ## Rules
 
-- Do NOT invent conventions that aren't supported by evidence or user input. If something is unknown and the user declines to specify, mark it as "Not specified" rather than guessing.
-- If a `PROJECT_GUIDELINES.md` already exists, ask the user whether to overwrite or merge before proceeding.
+- Do NOT invent conventions that aren't supported by evidence from the scan or user input.
+  If something is unknown and the user declines to specify, mark it as "Not specified"
+  rather than guessing.
 - Keep the output actionable and scannable — bullet points over paragraphs.
-- Use the project's own code as examples wherever possible.
+- The severity comment format must be exactly `<!-- severity: error -->`,
+  `<!-- severity: warning -->`, or `<!-- severity: info -->` — no other values.

@@ -1,11 +1,18 @@
 {
   "name": "project-guidelines",
-  "version": "0.1.0",
-  "description": "Code reviewer that creates and enforces project guidelines. Generates a single-source-of-truth PROJECT_GUIDELINES.md and reviews your codebase against it.",
+  "version": "1.0.0",
+  "description": "Generates and enforces project coding guidelines. Creates a PROJECT_GUIDELINES.md with severity-tagged conventions, then reviews code against it.",
   "author": {
     "name": "Xander Scannell"
   },
   "license": "MIT",
+  "keywords": [
+    "guidelines",
+    "code-review",
+    "conventions",
+    "standards",
+    "linting"
+  ],
   "skills": [
     "skills/guidelines-init",
     "skills/guidelines-review"
