@@ -1,0 +1,16 @@
+{
+  "name": "project-guidelines",
+  "version": "0.1.0",
+  "description": "Code reviewer that creates and enforces project guidelines. Generates a single-source-of-truth PROJECT_GUIDELINES.md and reviews your codebase against it.",
+  "author": {
+    "name": "Xander Scannell"
+  },
+  "license": "MIT",
+  "skills": [
+    "skills/guidelines-init",
+    "skills/guidelines-review"
+  ],
+  "agents": [
+    "agents/reviewer.md"
+  ]
+}
