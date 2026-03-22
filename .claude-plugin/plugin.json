@@ -1,7 +1,7 @@
 {
   "name": "project-guidelines",
   "version": "1.0.0",
-  "description": "Generates and enforces project coding guidelines. Creates a PROJECT_GUIDELINES.md with severity-tagged conventions, then reviews code against it.",
+  "description": "Generates and enforces project coding guidelines. Simple mode: flat rule list, direct review. Full mode: categorized guidelines with severity levels and structured reports.",
   "author": {
     "name": "Xander Scannell"
   },

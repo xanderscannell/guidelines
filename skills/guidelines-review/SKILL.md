@@ -17,8 +17,8 @@ allowed-tools:
 
 # Guidelines Review
 
-Review code against the project's `PROJECT_GUIDELINES.md` and produce a structured
-compliance report.
+Review code against the project's `PROJECT_GUIDELINES.md` and produce a compliance
+report. Supports two modes (simple and full), auto-detected from the guidelines file.
 
 ## Arguments
 
@@ -26,16 +26,16 @@ compliance report.
 
 | Argument | Files to review |
 |---|---|
-| (empty) | All source files in the project |
+| *(empty)* | All source files in the project |
 | File path | Just that file |
 | Directory path | All source files in that directory (recursive) |
 | `--changed` | Files changed since the last commit (`git diff --name-only HEAD`) |
 | `--staged` | Git-staged files only (`git diff --cached --name-only`) |
 | `--pr` | Files changed in current branch vs main (`git diff --name-only main...HEAD`; falls back to `master` if `main` doesn't exist) |
 
-## Workflow
+---
 
-### Step 1 — Load guidelines
+## Step 1 — Load guidelines and detect mode
 
 1. Look for `PROJECT_GUIDELINES.md` in the repo root.
 2. If not found, check `docs/PROJECT_GUIDELINES.md` and `.github/PROJECT_GUIDELINES.md`.
@@ -43,14 +43,16 @@ compliance report.
    > No `PROJECT_GUIDELINES.md` found. Run `/guidelines-init` first to set up your
    > project guidelines, or point me to your guidelines file.
    Then stop.
-4. Parse each section heading and look for a severity comment on the following line.
-   The format is `<!-- severity: (error|warning|info) -->`.
-   - Normalize whitespace when parsing — accept both `<!-- severity:error -->`
-     and `<!-- severity: error -->`.
-   - If a section has no severity comment, default to `warning`.
-   - Build a severity map: `{ "Code Style > Naming": "warning", "Security": "error", ... }`
+4. **Detect mode** by reading the first 10 lines of the file:
+   - If `<!-- mode: simple -->` is found → **simple mode**.
+   - If `<!-- mode: full -->` is found → **full mode**.
+   - If no mode marker is found: check the entire file for any `<!-- severity: ... -->`
+     tags. If found → full mode. If not found → simple mode.
+5. Branch to the appropriate review workflow below.
 
-### Step 2 — Determine scope
+---
+
+## Step 2 — Determine scope (shared across both modes)
 
 Based on `$ARGUMENTS`, collect the files to review.
 
@@ -63,7 +65,90 @@ For full-project or directory scopes, use Glob to collect source files.
 `.next`, `coverage`, `*.min.*`, `*.lock`, `*.map`, generated code, binary files,
 lockfiles, and images.
 
-### Step 3 — Review
+---
+
+## Simple Mode Review
+
+For guidelines files with `<!-- mode: simple -->` or no severity tags.
+
+### Parse rules
+
+Read the `## Rules` section. Each bullet is a rule. No severity parsing needed.
+Every rule has equal weight — a rule is a rule.
+
+### Review
+
+Read each file in scope and check it against the flat rule list.
+
+- Do NOT apply per-category heuristics (no grep patterns for security, N+1, etc.).
+- Do NOT assign severity levels. Every finding is simply a rule that was broken.
+- Just read the code and the rules, and use judgment.
+- For 50 files or fewer, review inline.
+- For 51+ files, delegate to the `reviewer` subagent with simple-mode input
+  (rules list + file batch). Split into batches of ~20 files.
+
+### Report
+
+Produce a clean, direct report:
+
+```markdown
+# Guidelines Review
+
+**Scope:** [what was reviewed]
+**Files scanned:** [count]
+
+## Issues Found
+
+### [Rule text]
+- `src/api/handler.ts:42` — [what is wrong] — [how to fix]
+- `src/api/router.ts:18` — [what is wrong] — [how to fix]
+
+### [Rule text]
+- `src/utils/db.ts:7` — [what is wrong] — [how to fix]
+
+## Clean
+[List of rules with no violations, or "All other rules passed."]
+```
+
+No summary table. No severity grouping. No pass/warn/fail columns. Just issues
+grouped by rule, with file:line and a fix for each.
+
+If no issues are found, say so clearly:
+
+```markdown
+# Guidelines Review
+
+**Scope:** [what was reviewed]
+**Files scanned:** [count]
+
+All files pass all rules.
+```
+
+### Next steps
+
+After presenting the report, offer:
+
+1. **Fix issues:** "Want me to fix these automatically?"
+2. **Add rules:** "Want to add any new rules based on what I found?"
+3. **Save report:** "Want me to save this report to `docs/reviews/YYYY-MM-DD.md`?"
+
+---
+
+## Full Mode Review
+
+For guidelines files with `<!-- mode: full -->` or `<!-- severity: ... -->` tags.
+
+### Parse guidelines
+
+Parse each section heading and look for a severity comment on the following line.
+The format is `<!-- severity: (error|warning|info) -->`.
+
+- Normalize whitespace when parsing — accept both `<!-- severity:error -->`
+  and `<!-- severity: error -->`.
+- If a section has no severity comment, default to `warning`.
+- Build a severity map: `{ "Code Style > Naming": "warning", "Security": "error", ... }`
+
+### Review
 
 **For scopes of 50 files or fewer:** Review files directly (inline).
 
@@ -118,7 +203,7 @@ When reviewing (inline or via subagent), check these patterns per category:
 - Check for missing pagination in list endpoints
 - Look for synchronous I/O in async contexts
 
-### Step 4 — Generate report
+### Report
 
 Produce a structured report:
 
@@ -171,7 +256,7 @@ Produce a structured report:
 to PROJECT_GUIDELINES.md]
 ```
 
-### Step 5 — Offer next steps
+### Next steps
 
 After presenting the report, offer:
 
@@ -180,21 +265,23 @@ After presenting the report, offer:
    Want me to add them to PROJECT_GUIDELINES.md?"
 3. **Save report:** "Want me to save this report to `docs/reviews/YYYY-MM-DD.md`?"
 
-## Review Principles
+---
 
-- **Be specific:** Always cite `file:line`, quote the guideline, and suggest a fix.
+## Review Principles (both modes)
+
+- **Be specific:** Always cite `file:line`, quote the rule, and suggest a fix.
   Never say "some files have issues" without naming them.
-- **Respect severity:** Don't escalate `info` items to sound like errors.
-  Don't downplay `error` items. The guideline author chose the severity deliberately.
-- **Skip tooling-enforced rules:** If a linter or formatter already enforces a rule
-  and runs in CI, mark it as "Enforced by tooling" and move on. Only mark as enforced
-  if the tool clearly covers the entire category (e.g., Prettier for formatting).
-  Don't skip individual rules based on tool presence alone.
+- **No invented rules:** Every finding must reference a specific rule or section of
+  PROJECT_GUIDELINES.md. Do not apply personal preferences or external standards
+  that aren't in the guidelines.
 - **Be proportional:** For a single-file review, be thorough. For a full-project
   review, focus on patterns and representative examples rather than listing every
   instance of a repeated violation. Group repeated violations with a count.
 - **Acknowledge compliance:** Don't only flag problems. Call out areas where the code
-  follows guidelines cleanly. A report that only lists negatives is demoralizing.
-- **No invented rules:** Every finding must reference a specific section of
-  PROJECT_GUIDELINES.md. Do not apply personal preferences or external standards
-  that aren't in the guidelines.
+  follows guidelines cleanly.
+- **Respect severity (full mode only):** Don't escalate `info` items to sound like
+  errors. Don't downplay `error` items. The guideline author chose the severity
+  deliberately.
+- **Skip tooling-enforced rules (full mode only):** If a linter or formatter already
+  enforces a rule and runs in CI, mark it as "Enforced by tooling" and move on.
+  Only mark as enforced if the tool clearly covers the entire category.

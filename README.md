@@ -1,10 +1,24 @@
 # Project Guidelines Plugin
 
-An agent plugin that generates and enforces project coding guidelines. Creates a
-`PROJECT_GUIDELINES.md` with severity-tagged conventions, then reviews your codebase
-against it.
+An agent plugin that generates and enforces project coding guidelines. Write your
+rules, review your code against them.
 
 Compatible with Claude Code, GitHub Copilot in VS Code, and Copilot CLI.
+
+## Quick Start
+
+```
+/guidelines-init
+```
+
+It asks one question: "What rules matter to you?" Write your rules, get a
+`PROJECT_GUIDELINES.md`, and start reviewing:
+
+```
+/guidelines-review --pr
+```
+
+That's it. The rest of this README covers the details.
 
 ## Installation
 
@@ -17,52 +31,82 @@ claude --plugin-dir /path/to/Guidelines
 Open the Command Palette and run **Chat: Install Plugin From Source**, then point to
 this directory or its Git repository URL.
 
+## Two Modes
+
+### Simple Mode (default)
+
+A flat list of rules in plain language. No categories, no severity levels, no ceremony.
+You write rules like:
+
+```markdown
+## Rules
+
+- Make sure everything has test cases
+- Don't add any more code to `src/legacy/handler.ts`, refactor elsewhere
+- Architectural logic belongs in `src/core/`, not in route handlers
+- All API responses must use the `ApiResponse` wrapper
+```
+
+The review checks your code against these rules and tells you what's broken. A rule is
+a rule — if it's in the file, it matters.
+
+### Full Mode
+
+Categorized guidelines with severity levels (`error` / `warning` / `info`), structured
+interviews, per-category review heuristics, and detailed reports with summary tables.
+Use this when you want comprehensive, team-wide coding standards.
+
+```
+/guidelines-init --full
+```
+
+See [Full Mode Details](#full-mode-details) below.
+
+### Upgrading
+
+Start simple, go full when you need it:
+
+```
+/guidelines-init --upgrade
+```
+
+This reads your existing simple rules, maps them into categories, adds severity tags,
+and runs the full auto-detection and interview flow. Your original rules are preserved.
+
+---
+
 ## Skills
 
 ### `/guidelines-init`
 
-Generates a `PROJECT_GUIDELINES.md` file — the single source of truth for your
-project's coding standards.
+Generates a `PROJECT_GUIDELINES.md` file.
 
-**Workflow:**
-
-1. **Auto-detect** — Scans your project for signal files (`package.json`, `tsconfig.json`,
-   `pyproject.toml`, `go.mod`, `Cargo.toml`, CI configs, linter configs, etc.) and
-   detects patterns like naming conventions, test file organization, import style, and
-   directory structure using Glob and Grep.
-
-2. **Interview** — Presents findings and asks targeted questions to fill gaps across
-   8 categories: Code Style, Architecture, Error Handling, Testing, Git Workflow,
-   Documentation, Security, and Performance. Skips categories already fully covered
-   by auto-detection or irrelevant to the project.
-
-3. **Generate** — Writes `PROJECT_GUIDELINES.md` with severity-tagged sections.
-   Every section includes a `<!-- severity: error|warning|info -->` comment that
-   controls how strictly `/guidelines-review` enforces it.
-
-4. **Confirm** — Shows a summary table of categories, rule counts, and severity
-   levels. Lets you adjust before committing.
-
-**Default severity mapping:**
-
-| Category | Severity |
+| Argument | Mode |
 |---|---|
-| Security, Error Handling, Architecture | `error` (must fix) |
-| Code Style, Testing, Git Workflow, Documentation | `warning` (should fix) |
-| Performance | `info` (nice to have) |
+| *(empty)* | Simple — quick scan, one question, flat rule list |
+| `--simple` | Same as empty |
+| `--full` | Full — comprehensive scan, 8-category interview, severity tags |
+| `--upgrade` | Converts existing simple file to full mode |
+
+**Simple mode workflow:**
+1. Quick scan to identify tech stack
+2. "What rules matter to you?"
+3. Generates `PROJECT_GUIDELINES.md` with a flat `## Rules` list
+
+**Full mode workflow:**
+1. Auto-detect conventions from 13+ signal files
+2. Structured interview across 8 categories (skips what's already detected)
+3. Generate categorized guidelines with severity tags
+4. Confirm — summary table, adjust severities, then commit
 
 **Edge cases handled:**
-- **Monorepo** — Detects `packages/`, `apps/`, `lerna.json`, `pnpm-workspace.yaml`,
-  or `turbo.json` and asks whether guidelines should be global or per-package.
-- **Existing guidelines** — Asks whether to merge new detections or replace entirely.
-- **Empty project** — Generates a starter template with TODO markers for customization.
+- **Monorepo** — Detects workspaces and asks about global vs per-package rules
+- **Existing guidelines** — Asks to merge or replace; warns about mode mismatches
+- **Empty project** — Generates a starter template with TODO markers
 
-### `/guidelines-review [path|--changed|--staged|--pr]`
+### `/guidelines-review [scope]`
 
-Reviews your codebase against `PROJECT_GUIDELINES.md` and produces an actionable
-compliance report.
-
-**Scope options:**
+Reviews code against your guidelines. Auto-detects simple or full mode from the file.
 
 | Argument | What gets reviewed |
 |---|---|
@@ -73,54 +117,55 @@ compliance report.
 | `--staged` | Git-staged files only |
 | `--pr` | Files changed in the current branch vs main/master |
 
-**Review process:**
+**Simple mode report:**
+```markdown
+# Guidelines Review
+**Scope:** --pr | **Files scanned:** 8
 
-1. **Load guidelines** — Reads `PROJECT_GUIDELINES.md` (checks root, `docs/`, and
-   `.github/`). Parses severity comments to build a severity map. Missing severity
-   comments default to `warning`.
+## Issues Found
 
-2. **Determine scope** — Collects files based on the argument. Excludes `node_modules`,
-   `.git`, `dist`, `build`, `vendor`, `__pycache__`, lockfiles, minified files, and
-   source maps.
+### Don't add any more code to `src/legacy/handler.ts`
+- `src/legacy/handler.ts:142` — New function added — Move to `src/orders/`
 
-3. **Review** — For 50 files or fewer, reviews inline. For 51+, delegates to the
-   `reviewer` subagent in parallel batches of ~20 files each.
+### All API responses must use the `ApiResponse` wrapper
+- `src/api/users.ts:38` — Returns raw object — Wrap with `ApiResponse.success(data)`
 
-4. **Report** — Produces a structured report with a summary table and findings grouped
-   by severity (violations, warnings, suggestions), each citing the specific guideline,
-   file, line number, and a concrete fix.
+## Clean
+All other rules passed.
+```
 
-5. **Next steps** — Offers to fix violations automatically, update guidelines with
-   newly discovered patterns, or save the report to `docs/reviews/`.
+**Full mode report** includes a summary table with pass/warn/fail counts per category,
+findings grouped by severity (violations, warnings, suggestions), and recommendations
+for new guidelines.
 
-**Review heuristics include:**
-- Naming and import pattern checks
-- Module boundary and directory structure validation
-- Bare `catch`/`except` detection, unhandled promise checks
-- Test file existence and anti-pattern detection
-- Hardcoded secret scanning (`sk-`, `ghp_`, API keys, etc.)
-- N+1 query pattern detection, missing pagination checks
-- Tooling-enforced rule detection (skips rules already covered by Prettier, ESLint,
-  Black, gofmt, etc. running in CI)
+**After the report**, both modes offer:
+- Fix issues automatically
+- Add new rules / update guidelines
+- Save report to `docs/reviews/`
+
+---
 
 ## Subagent
 
 ### `reviewer`
 
 Internal subagent used by `/guidelines-review` for parallel processing of large
-codebases. Not invoked directly by users.
+codebases (51+ files). Not invoked directly by users.
 
-- Receives a batch of ~20 files, the guidelines text, a severity map, and which
-  categories to focus on
-- Returns structured JSON findings (file, line, severity, issue, suggestion,
-  guideline text)
+- Receives file batches of ~20 files
+- **Simple mode:** receives rules list, returns findings per rule
+- **Full mode:** receives guidelines + severity map + category focus, returns
+  categorized findings with severity levels
 - Read-only — never modifies files
-- Uses the severity from the guidelines, not its own judgment (ambiguous cases
-  get `info` severity with a question)
+- Returns structured JSON for the parent skill to merge into the report
 
-## The Severity System
+---
 
-The severity HTML comment is the contract between init and review:
+## Full Mode Details
+
+### The Severity System
+
+In full mode, every section of `PROJECT_GUIDELINES.md` has a severity tag:
 
 ```markdown
 ## Security
@@ -128,21 +173,47 @@ The severity HTML comment is the contract between init and review:
 - Never commit secrets or API keys...
 ```
 
-- `error` — **Violation.** Must fix. Directly contradicts a stated guideline.
-- `warning` — **Warning.** Should fix. Inconsistent with convention but not explicitly
-  forbidden. Also the default when no severity comment is present.
-- `info` — **Suggestion.** Nice to have. Opportunity to better align with guidelines.
+| Severity | Meaning | Review behavior |
+|---|---|---|
+| `error` | Violation — must fix | Reported as a hard failure |
+| `warning` | Should fix | Flagged but not critical |
+| `info` | Nice to have | Suggestion only |
 
-Severities are set by `/guidelines-init` based on category defaults, adjusted by the
-user during the confirm step, and can be edited at any time by changing the HTML
-comment in `PROJECT_GUIDELINES.md`.
+Default when no tag is present: `warning`.
 
-## Reference Material
+**Default severity mapping set by init:**
+
+| Category | Default |
+|---|---|
+| Security, Error Handling, Architecture | `error` |
+| Code Style, Testing, Git Workflow, Documentation | `warning` |
+| Performance | `info` |
+
+Severities can be adjusted during init's confirm step or by editing the HTML comment
+in the file at any time.
+
+### Full Mode Review Heuristics
+
+In full mode, the review applies targeted checks per category:
+
+- **Code Style** — Naming patterns, import ordering, formatter detection
+- **Architecture** — Directory structure, module boundary crossings, circular deps
+- **Error Handling** — Bare catch/except, unhandled promises, missing logging
+- **Testing** — Test file existence, naming conventions, anti-patterns
+- **Git Workflow** — Commit message format, branch naming
+- **Documentation** — Missing docstrings/JSDoc, README completeness
+- **Security** — Hardcoded secrets, insecure patterns (`eval`, `innerHTML`, SQL concat)
+- **Performance** — N+1 queries, missing pagination, sync I/O in async contexts
+
+Rules already enforced by tooling (Prettier, ESLint, Black, etc.) running in CI are
+marked as "Enforced by tooling" and skipped.
+
+### Reference Material
 
 `references/guideline-categories.md` ships with the plugin and contains per-stack
 example rules (JavaScript/TypeScript, Python, Go, Rust) across all 8 categories.
-Used by `/guidelines-init` as inspiration during generation — examples are adapted
-to the specific project, not copied verbatim.
+Used by full-mode init as inspiration — adapted to the project, not copied verbatim.
+Not used in simple mode.
 
 ## Project Structure
 
@@ -151,13 +222,13 @@ to the specific project, not copied verbatim.
   plugin.json                    # Plugin manifest
 skills/
   guidelines-init/
-    SKILL.md                     # /guidelines-init skill
+    SKILL.md                     # /guidelines-init (simple + full + upgrade)
   guidelines-review/
-    SKILL.md                     # /guidelines-review skill
+    SKILL.md                     # /guidelines-review (auto-detects mode)
 agents/
-  reviewer.md                   # Parallel review subagent
+  reviewer.md                   # Parallel review subagent (both modes)
 references/
-  guideline-categories.md       # Per-stack example rules
+  guideline-categories.md       # Per-stack example rules (full mode only)
 ```
 
 ## License
