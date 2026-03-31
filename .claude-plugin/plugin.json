@@ -16,5 +16,12 @@
     "conventions",
     "standards",
     "linting"
+  ],
+  "skills": [
+    "./skills/guidelines-init",
+    "./skills/guidelines-review"
+  ],
+  "agents": [
+    "./agents/reviewer.md"
   ]
 }
